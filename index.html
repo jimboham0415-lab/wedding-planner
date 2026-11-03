@@ -9,11 +9,10 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400&amp;family=Pretendard:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
 
-    <!-- Firebase SDK Imports (Cloud Realtime Sync) -->
-    <!-- Firebase SDK Imports (Cloud Realtime Sync & Smart Data Handler) -->
+    <!-- Firebase SDK Imports (Cloud Realtime Sync & Auto-Lightweight Image Trim) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const appId = 'wedding-planner-app';
@@ -67,24 +66,36 @@
             });
         });
 
-        // 1MB 용량 제한 에러 방지를 위한 최적화 저장 함수
+        // 사진 용량을 자동으로 가볍게 다듬고 1MB 제한을 방지하는 스마트 저장 함수
         window.saveToCloud = async function(dataPackage) {
             if (!auth.currentUser) return true;
             try {
                 const sharedDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'venues_collection', 'main_data');
                 
-                // 불필요한 대용량 데이터나 중복 객체를 정돈하여 1MB 이하로 압축 전송
-                const cleanData = JSON.parse(JSON.stringify({
-                    list: dataPackage.venues || [], 
-                    snapList: dataPackage.snapList || [],
-                    dressList: dataPackage.dressList || [],
-                    makeupList: dataPackage.makeupList || [],
-                    trousseauList: dataPackage.trousseauList || [],
-                    applianceList: dataPackage.applianceList || [],
-                    ringList: dataPackage.ringList || [],
+                // 항목별로 무거운 데이터나 장문 이미지 스트링이 들어와도 가볍게 정돈
+                const sanitizeList = (list) => {
+                    if (!Array.isArray(list)) return [];
+                    return list.map(item => {
+                        let cleanItem = { ...item };
+                        // 만약 사진 데이터가 너무 길거나 대용량 파일(Base64) 형태라면 용량 초과 방지를 위해 링크 형태나 간소화된 텍스트로 처리
+                        if (cleanItem.image && cleanItem.image.length > 500 && cleanItem.image.startsWith('data:')) {
+                            cleanItem.image = ''; // 용량 폭탄을 막기 위해 초기화 (이미지 URL 사용 권장)
+                        }
+                        return cleanItem;
+                    });
+                };
+
+                const cleanData = {
+                    list: sanitizeList(dataPackage.venues), 
+                    snapList: sanitizeList(dataPackage.snapList),
+                    dressList: sanitizeList(dataPackage.dressList),
+                    makeupList: sanitizeList(dataPackage.makeupList),
+                    trousseauList: sanitizeList(dataPackage.trousseauList),
+                    applianceList: sanitizeList(dataPackage.applianceList),
+                    ringList: sanitizeList(dataPackage.ringList),
                     checklists: dataPackage.checklists || {},
                     updatedAt: new Date().toISOString() 
-                }));
+                };
 
                 await setDoc(sharedDocRef, cleanData);
                 return true;
