@@ -15,25 +15,79 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+        const appId = 'wedding-planner-app';
 
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyDJZ8ORckLCEHEIQO0D3r7yHRT99Klp4eU",
-    authDomain: "wedding-planner-f2386.firebaseapp.com",
-    projectId: "wedding-planner-f2386",
-    storageBucket: "wedding-planner-f2386.firebasestorage.app",
-    messagingSenderId: "408305487217",
-    appId: "1:408305487217:web:e9ca479ec55ba138a93ad0"
-  };
+        const firebaseConfig = {
+            apiKey: "AIzaSyDJZ8ORckLCEHEIQO0D3r7yHRT99Klp4eU",
+            authDomain: "wedding-planner-f2386.firebaseapp.com",
+            projectId: "wedding-planner-f2386",
+            storageBucket: "wedding-planner-f2386.firebasestorage.app",
+            messagingSenderId: "408305487217",
+            appId: "1:408305487217:web:e9ca479ec55ba138a93ad0"
+        };
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-</script>
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        window.firebaseApp = app;
+        window.firebaseAuth = auth;
+        window.firebaseDb = db;
+
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (e) {
+                console.error("Firebase Auth Error:", e);
+            }
+        };
+
+        initAuth().then(() => {
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    const sharedDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'venues_collection', 'main_data');
+                    onSnapshot(sharedDocRef, (snapshot) => {
+                        if (snapshot.exists()) {
+                            const cloudData = snapshot.data();
+                            if (cloudData && !snapshot.metadata.hasPendingWrites && typeof window.applyCloudData === 'function') {
+                                window.applyCloudData(cloudData);
+                            }
+                            const cloudBadge = document.getElementById('cloudSyncStatus');
+                            if (cloudBadge) cloudBadge.innerHTML = '<i class="fa-solid fa-cloud-check text-green-500"></i> 실시간 연동됨';
+                        }
+                    }, (error) => {
+                        console.error("Firestore Listen Error:", error);
+                    });
+                }
+            });
+        });
+
+        window.saveToCloud = async function(dataPackage) {
+            if (!auth.currentUser) return true;
+            try {
+                const sharedDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'venues_collection', 'main_data');
+                await setDoc(sharedDocRef, { 
+                    list: dataPackage.venues || [], 
+                    snapList: dataPackage.snapList || [],
+                    dressList: dataPackage.dressList || [],
+                    makeupList: dataPackage.makeupList || [],
+                    trousseauList: dataPackage.trousseauList || [],
+                    applianceList: dataPackage.applianceList || [],
+                    ringList: dataPackage.ringList || [],
+                    checklists: dataPackage.checklists || {},
+                    updatedAt: new Date().toISOString() 
+                });
+                return true;
+            } catch (err) {
+                console.error("Cloud Save Failed:", err);
+                return false;
+            }
+        };
+    </script>
     
     <style>
         body {
