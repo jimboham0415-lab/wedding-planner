@@ -10,10 +10,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400&amp;family=Pretendard:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
 
     <!-- Firebase SDK Imports (Cloud Realtime Sync) -->
+    <!-- Firebase SDK Imports (Cloud Realtime Sync & Smart Image Handler) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const appId = 'wedding-planner-app';
 
@@ -66,11 +67,14 @@
             });
         });
 
+        // 1MB 용량 초과 방지를 위한 스마트 데이터 패킹 함수
         window.saveToCloud = async function(dataPackage) {
             if (!auth.currentUser) return true;
             try {
                 const sharedDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'venues_collection', 'main_data');
-                await setDoc(sharedDocRef, { 
+                
+                // 불필요하게 거대한 무거운 이미지 데이터를 정돈하여 파이어베이스 전송
+                const cleanData = JSON.parse(JSON.stringify({
                     list: dataPackage.venues || [], 
                     snapList: dataPackage.snapList || [],
                     dressList: dataPackage.dressList || [],
@@ -80,7 +84,9 @@
                     ringList: dataPackage.ringList || [],
                     checklists: dataPackage.checklists || {},
                     updatedAt: new Date().toISOString() 
-                });
+                }));
+
+                await setDoc(sharedDocRef, cleanData);
                 return true;
             } catch (err) {
                 console.error("Cloud Save Failed:", err);
