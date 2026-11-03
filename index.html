@@ -1,4 +1,5 @@
-<html lang="ko"><head>
+<html lang="ko">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>프리미엄 웨딩홀 비교 대시보드 | Wedding Venue Planner</title>
@@ -7,9 +8,9 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400&amp;family=Pretendard:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400&family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- Firebase SDK Imports (Cloud Realtime Sync & Auto-Lightweight Single Image) -->
+    <!-- Firebase SDK Imports (Cloud Realtime Sync) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -66,7 +67,7 @@
             });
         });
 
-        // 사진 1개 제한 및 용량 최적화 클라우드 저장 함수
+        // 텍스트와 가벼운 링크 데이터만 전송하여 1MB 제한 문제 원천 차단
         window.saveToCloud = async function(dataPackage) {
             if (!auth.currentUser) return true;
             try {
@@ -74,14 +75,20 @@
                 
                 const sanitizeList = (list) => {
                     if (!Array.isArray(list)) return [];
-                    return list.map(item => {
-                        let cleanItem = { ...item };
-                        // 사진은 무조건 대표 사진 1개만 유지
-                        if (Array.isArray(cleanItem.images)) {
-                            cleanItem.images = cleanItem.images.slice(0, 1);
-                        }
-                        return cleanItem;
-                    });
+                    return list.map(item => ({
+                        id: item.id,
+                        name: item.name || '',
+                        location: item.location || '',
+                        rentalFee: Number(item.rentalFee) || 0,
+                        mealCost: Number(item.mealCost) || 0,
+                        parking: Number(item.parking) || 0,
+                        openDate: item.openDate || '',
+                        website: item.website || '',
+                        instagram: item.instagram || '',
+                        desc: item.desc || '',
+                        price: Number(item.price) || 0,
+                        rating: item.rating || ''
+                    }));
                 };
 
                 const cleanData = {
@@ -154,13 +161,11 @@
                     <span id="cloudSyncStatus" class="hidden sm:inline-flex items-center gap-1.5 text-xs text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl font-medium">
                         <i class="fa-solid fa-cloud text-amber-500"></i> 온라인 실시간 동기화
                     </span>
-                    <button onclick="exportToStandaloneHtml()" class="bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 border border-emerald-700 group">
-                        <i class="fa-solid fa-file-arrow-down text-base text-white"></i>
-                        <span class="text-xs sm:text-sm font-bold text-white tracking-wide">HTML 파일로 내보내기</span>
+                    <button onclick="exportToStandaloneHtml()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md transition flex items-center gap-2 border border-emerald-700">
+                        <i class="fa-solid fa-file-arrow-down text-white"></i> HTML 내보내기
                     </button>
-                    <button onclick="manualSaveVenues()" class="bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 border border-amber-600 group">
-                        <i class="fa-solid fa-floppy-disk text-base text-white"></i>
-                        <span class="text-xs sm:text-sm font-bold text-white tracking-wide">저장하기</span>
+                    <button onclick="manualSaveVenues()" class="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md transition flex items-center gap-2 border border-amber-600">
+                        <i class="fa-solid fa-floppy-disk text-white"></i> 저장하기
                     </button>
                 </div>
             </div>
@@ -172,111 +177,76 @@
         <div id="toastIcon" class="w-7 h-7 rounded-full text-white flex items-center justify-center shrink-0 bg-amber-500"><i class="fa-solid fa-check text-xs"></i></div>
         <div>
             <p id="toastTitle" class="text-xs font-bold text-amber-200">데이터 저장 완료</p>
-            <p id="toastMsg" class="text-[11px] text-gray-300">모든 변경 항목과 업로드한 사진이 저장되었습니다.</p>
+            <p id="toastMsg" class="text-[11px] text-gray-300">모든 변경 항목이 저장되었습니다.</p>
         </div>
     </div>
 
-    <!-- Main Container with Left Sidebar Navigation -->
+    <!-- Main Container -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full flex flex-col md:flex-row gap-8">
         
-        <!-- Left Sidebar Navigation Tabs -->
+        <!-- Sidebar -->
         <aside class="w-full md:w-64 shrink-0 space-y-2">
-            <div class="bg-white/90 backdrop-blur-md rounded-2xl p-3 border border-amber-200/60 shadow-sm sticky top-28 space-y-1">
+            <div class="bg-white/95 backdrop-blur-md rounded-2xl p-3 border border-amber-200/60 shadow-sm sticky top-28 space-y-1">
                 <div class="px-3 py-2 text-xs font-bold text-amber-800/60 uppercase tracking-wider">웨딩 카테고리</div>
-                
                 <button onclick="switchTab('venue')" id="tabBtn-venue" class="nav-tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm font-semibold transition text-gray-600 hover:bg-amber-50 active">
-                    <i class="fa-solid fa-building text-base w-5"></i>
-                    <span>예식장</span>
+                    <i class="fa-solid fa-building text-base w-5"></i><span>예식장</span>
                 </button>
-
                 <button onclick="switchTab('snap')" id="tabBtn-snap" class="nav-tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm font-semibold transition text-gray-600 hover:bg-amber-50">
-                    <i class="fa-solid fa-camera-retro text-base w-5"></i>
-                    <span>스냅 / 본식 스냅</span>
+                    <i class="fa-solid fa-camera-retro text-base w-5"></i><span>스냅 / 본식 스냅</span>
                 </button>
-
                 <button onclick="switchTab('dress')" id="tabBtn-dress" class="nav-tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm font-semibold transition text-gray-600 hover:bg-amber-50">
-                    <i class="fa-solid fa-vest-patches text-base w-5"></i>
-                    <span>드레스</span>
+                    <i class="fa-solid fa-vest-patches text-base w-5"></i><span>드레스</span>
                 </button>
-
                 <button onclick="switchTab('makeup')" id="tabBtn-makeup" class="nav-tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm font-semibold transition text-gray-600 hover:bg-amber-50">
-                    <i class="fa-solid fa-wand-magic-sparkles text-base w-5"></i>
-                    <span>메이크업</span>
+                    <i class="fa-solid fa-wand-magic-sparkles text-base w-5"></i><span>메이크업</span>
                 </button>
-
                 <button onclick="switchTab('ring')" id="tabBtn-ring" class="nav-tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm font-semibold transition text-gray-600 hover:bg-amber-50">
-                    <i class="fa-solid fa-ring text-base w-5"></i>
-                    <span>웨딩링</span>
+                    <i class="fa-solid fa-ring text-base w-5"></i><span>웨딩링</span>
                 </button>
-
                 <button onclick="switchTab('trousseau')" id="tabBtn-trousseau" class="nav-tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm font-semibold transition text-gray-600 hover:bg-amber-50">
-                    <i class="fa-solid fa-couch text-base w-5"></i>
-                    <span>혼수</span>
+                    <i class="fa-solid fa-couch text-base w-5"></i><span>혼수</span>
                 </button>
-
                 <button onclick="switchTab('appliance')" id="tabBtn-appliance" class="nav-tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm font-semibold transition text-gray-600 hover:bg-amber-50">
-                    <i class="fa-solid fa-plug text-base w-5"></i>
-                    <span>가전</span>
+                    <i class="fa-solid fa-plug text-base w-5"></i><span>가전</span>
                 </button>
             </div>
         </aside>
 
-        <!-- Dynamic Content Panel Area -->
+        <!-- Content Area -->
         <main class="flex-1 w-full space-y-8">
-
-            <!-- Tab 1: Venue View -->
+            <!-- Venue Tab Content -->
             <div id="tabContent-venue" class="space-y-8">
-                <!-- Top Summary Cards -->
                 <section class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div class="glass-card rounded-2xl p-5 shadow-sm">
-                        <div class="flex justify-between items-center text-xs text-gray-500 font-medium mb-1">
-                            <span>비교 웨딩홀</span>
-                            <i class="fa-solid fa-building text-amber-400"></i>
-                        </div>
-                        <p id="statTotalVenues" class="text-2xl font-bold text-gray-900">3 곳</p>
-                        <p class="text-[11px] text-amber-600 mt-1">후보지 리스트업 완료</p>
+                        <div class="text-xs text-gray-500 font-medium mb-1">비교 웨딩홀</div>
+                        <p id="statTotalVenues" class="text-2xl font-bold text-gray-900">0 곳</p>
                     </div>
-
                     <div class="glass-card rounded-2xl p-5 shadow-sm">
-                        <div class="flex justify-between items-center text-xs text-gray-500 font-medium mb-1">
-                            <span>최저 식대 (1인)</span>
-                            <i class="fa-solid fa-utensils text-amber-400"></i>
-                        </div>
-                        <p id="statMinMeal" class="text-2xl font-bold text-amber-600">₩75,000</p>
-                        <p id="statMinMealName" class="text-[11px] text-gray-500 mt-1 truncate">루이비스 컨벤션</p>
+                        <div class="text-xs text-gray-500 font-medium mb-1">최저 식대 (1인)</div>
+                        <p id="statMinMeal" class="text-2xl font-bold text-amber-600">₩0</p>
                     </div>
-
                     <div class="glass-card rounded-2xl p-5 shadow-sm">
-                        <div class="flex justify-between items-center text-xs text-gray-500 font-medium mb-1">
-                            <span>최저 대관료</span>
-                            <i class="fa-solid fa-tag text-amber-400"></i>
-                        </div>
-                        <p id="statMinRental" class="text-2xl font-bold text-gray-900">₩6,500,000</p>
-                        <p id="statMinRentalName" class="text-[11px] text-gray-500 mt-1 truncate">루이비스 컨벤션</p>
+                        <div class="text-xs text-gray-500 font-medium mb-1">최저 대관료</div>
+                        <p id="statMinRental" class="text-2xl font-bold text-gray-900">₩0</p>
                     </div>
-
                     <div class="glass-card rounded-2xl p-5 shadow-sm">
-                        <div class="flex justify-between items-center text-xs text-gray-500 font-medium mb-1">
-                            <span>최대 주차 수량</span>
-                            <i class="fa-solid fa-square-parking text-amber-400"></i>
-                        </div>
-                        <p id="statMaxParking" class="text-2xl font-bold text-gray-900">1,500 대</p>
-                        <p id="statMaxParkingName" class="text-[11px] text-gray-500 mt-1 truncate">더링크 호텔</p>
+                        <div class="text-xs text-gray-500 font-medium mb-1">최대 주차 수량</div>
+                        <p id="statMaxParking" class="text-2xl font-bold text-gray-900">0 대</p>
                     </div>
                 </section>
 
-                <!-- Cards Grid -->
                 <section>
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
                             <i class="fa-solid fa-hotel text-amber-500"></i> 예식장 비교 목록
                         </h2>
-                        <span class="text-xs text-gray-400">* 연필 아이콘을 눌러 수정 및 대표 사진 변경</span>
+                        <button onclick="openVenueModal()" class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium px-3.5 py-2 rounded-xl transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-plus"></i> 새 예식장 추가
+                        </button>
                     </div>
                     <div id="venueGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 dense-grid items-stretch"></div>
                 </section>
 
-                <!-- Summary Table -->
                 <section class="glass-card rounded-2xl p-6 shadow-sm overflow-hidden">
                     <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                         <i class="fa-solid fa-table-list text-amber-500"></i> 한눈에 보는 요약 비교표
@@ -284,23 +254,21 @@
                     <div class="flex flex-wrap items-center gap-3 mb-4 bg-amber-50/60 border border-amber-100 rounded-2xl px-4 py-3">
                         <label for="guestCountInput" class="text-sm font-semibold text-gray-700">예상 하객 수</label>
                         <div class="flex items-center gap-1.5">
-                            <input type="number" id="guestCountInput" min="0" step="10" value="100" oninput="setGuestCount(this.value)" class="w-24 px-3 py-1.5 rounded-xl border border-amber-200 bg-white text-right text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                            <input type="number" id="guestCountInput" min="0" step="10" value="100" oninput="setGuestCount(this.value)" class="w-24 px-3 py-1.5 rounded-xl border border-amber-200 bg-white text-right text-sm font-bold text-gray-900 focus:outline-none">
                             <span class="text-sm text-gray-600">명</span>
                         </div>
-                        <span class="text-xs text-gray-400">최종 가격 = 대관료 + (식대 × 인원)</span>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse text-xs sm:text-sm">
                             <thead>
                                 <tr class="border-b border-amber-200 text-gray-400 font-medium">
-                                    <th class="p-3 whitespace-nowrap text-left">예식장</th>
-                                    <th class="p-3 whitespace-nowrap text-left">위치</th>
-                                    <th class="p-3 whitespace-nowrap text-right">대관료</th>
-                                    <th class="p-3 whitespace-nowrap text-right">식대 (1인)</th>
-                                    <th class="p-3 whitespace-nowrap text-right">최종 가격</th>
-                                    <th class="p-3 whitespace-nowrap text-center">주차 가능</th>
-                                    <th class="p-3 whitespace-nowrap text-center">예약 오픈 예정일</th>
-                                    <th class="p-3 whitespace-nowrap text-center">관리</th>
+                                    <th class="p-3 text-left">예식장</th>
+                                    <th class="p-3 text-left">위치</th>
+                                    <th class="p-3 text-right">대관료</th>
+                                    <th class="p-3 text-right">식대 (1인)</th>
+                                    <th class="p-3 text-right">최종 가격</th>
+                                    <th class="p-3 text-center">주차</th>
+                                    <th class="p-3 text-center">관리</th>
                                 </tr>
                             </thead>
                             <tbody id="venueTableBody" class="divide-y divide-amber-100"></tbody>
@@ -309,182 +277,123 @@
                 </section>
             </div>
 
-            <!-- Generic Container for Other Tabs (Snap, Dress, Makeup) -->
+            <!-- Generic Tab Content (Snap, Dress, Makeup, Ring, Trousseau, Appliance) -->
             <div id="tabContent-generic" class="space-y-8 hidden">
                 <section class="flex justify-between items-center">
-                    <h2 id="genericTabTitle" class="text-xl font-bold text-gray-900 flex items-center gap-2 flex-wrap">📸 스냅 / 본식 스냅 업체 리스트</h2>
+                    <h2 id="genericTabTitle" class="text-xl font-bold text-gray-900 flex items-center gap-2">업체 리스트</h2>
                     <button onclick="openGenericModal()" class="bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-plus"></i> <span id="genericAddBtnText">새 업체 추가</span>
+                        <i class="fa-solid fa-plus"></i> <span id="genericAddBtnText">새 항목 추가</span>
                     </button>
                 </section>
-                <div id="genericTotalBar" class="hidden items-center justify-between bg-amber-50/70 border border-amber-100 rounded-2xl px-5 py-3 -mt-4">
-                    <span class="text-sm font-semibold text-gray-700">예상 합계 <span id="genericTotalCount" class="text-xs text-gray-400 font-normal"></span></span>
-                    <span id="genericTotalValue" class="text-lg font-bold text-amber-600"></span>
-                </div>
                 <div id="genericGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-stretch"></div>
             </div>
-
         </main>
     </div>
 
-    <!-- Generic Item Modal (Snap, Dress, Makeup) -->
-    <div id="genericModal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
-        <div class="glass-card bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full space-y-6 shadow-2xl relative my-8">
-            <button onclick="closeGenericModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
-                <i class="fa-solid fa-xmark text-xl"></i>
-            </button>
-            <h3 id="genericModalTitle" class="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <i class="fa-solid fa-pen-to-square text-amber-500"></i> 업체 정보 수정
-            </h3>
-            <form id="genericForm" onsubmit="handleGenericFormSubmit(event)" class="space-y-4">
-                <input type="hidden" id="inputGenericId">
-                <div>
-                    <label id="genericNameLabel" class="block text-xs font-bold text-gray-700 mb-1">업체명</label>
-                    <input type="text" id="inputGenericName" required="" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-amber-500 focus:outline-none">
-                </div>
-                <div id="genericLocationWrap">
-                    <label class="block text-xs font-bold text-gray-700 mb-1">위치 (주소)</label>
-                    <input type="text" id="inputGenericLocation" placeholder="서울 강남구 ..." class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-amber-500 focus:outline-none">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1">설명 및 참고사항</label>
-                    <input type="text" id="inputGenericDesc" placeholder="옵션, 구성 등" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-amber-500 focus:outline-none">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">예상 견적 (원)</label>
-                        <input type="number" id="inputGenericPrice" required="" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-amber-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">평점 / 별점</label>
-                        <input type="text" id="inputGenericRating" placeholder="4.9" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-amber-500 focus:outline-none">
-                    </div>
-                </div>
-                <!-- Links input -->
-                <div class="space-y-3 pt-1 border-t border-gray-100">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">
-                            <i class="fa-solid fa-globe text-blue-500 mr-1"></i> <span id="genericWebsiteLabel">웹사이트 주소 (URL)</span>
-                        </label>
-                        <input type="url" id="inputGenericWebsite" placeholder="https://..." class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-amber-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">
-                            <i class="fa-brands fa-instagram text-pink-500 mr-1"></i> 인스타그램 주소 / 계정
-                        </label>
-                        <input type="text" id="inputGenericInstagram" placeholder="https://instagram.com/... 또는 @계정" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-amber-500 focus:outline-none">
-                    </div>
-                </div>
-                <div id="genericPhotoUpload">
-                    <label class="block text-xs font-bold text-gray-700 mb-1">대표 사진 직접 업로드 (1장)</label>
-                    <input type="file" id="gFile0" accept="image/*" class="w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100">
-                </div>
-                <div class="pt-4 flex items-center justify-end gap-3">
-                    <button type="button" id="genericDeleteBtn" onclick="requestDelete(currentTab, document.getElementById('inputGenericId').value)" class="mr-auto hidden px-4 py-2.5 rounded-xl border border-red-200 text-xs font-bold text-red-500 hover:bg-red-50"><i class="fa-solid fa-trash mr-1"></i>삭제</button>
-                    <button type="button" onclick="closeGenericModal()" class="px-5 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50">취소</button>
-                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-md">저장하기</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Venue Add / Edit Modal -->
+    <!-- Venue Modal -->
     <div id="venueModal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm items-center justify-center p-4 overflow-y-auto hidden">
         <div class="glass-card bg-white rounded-3xl p-6 sm:p-8 max-w-xl w-full space-y-6 shadow-2xl relative my-8">
-            <button onclick="closeVenueModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
-                <i class="fa-solid fa-xmark text-xl"></i>
-            </button>
-            <h3 id="modalTitle" class="text-xl font-bold text-gray-900 flex items-center gap-2">예식장 정보 수정</h3>
+            <button onclick="closeVenueModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <h3 id="modalTitle" class="text-xl font-bold text-gray-900">예식장 정보</h3>
             <form id="venueForm" onsubmit="handleVenueFormSubmit(event)" class="space-y-4">
-                <input type="hidden" id="inputVenueId" value="v1">
+                <input type="hidden" id="inputVenueId">
                 <div>
                     <label class="block text-xs font-bold text-gray-700 mb-1">예식장 명칭</label>
-                    <input type="text" id="inputVenueName" required="" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-amber-500 focus:outline-none">
+                    <input type="text" id="inputVenueName" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-amber-500">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-700 mb-1">위치 (주소)</label>
-                    <input type="text" id="inputVenueLocation" required="" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-amber-500 focus:outline-none">
+                    <input type="text" id="inputVenueLocation" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-amber-500">
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-gray-700 mb-1">대관료 (원)</label>
-                        <input type="number" id="inputVenueRental" required="" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-amber-500 focus:outline-none">
+                        <input type="number" id="inputVenueRental" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-700 mb-1">식대 (1인/원)</label>
-                        <input type="number" id="inputVenueMeal" required="" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-amber-500 focus:outline-none">
+                        <input type="number" id="inputVenueMeal" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none">
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">주차 가능 (대)</label>
-                        <input type="number" id="inputParking" required="" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-amber-500 focus:outline-none">
+                        <label class="block text-xs font-bold text-gray-700 mb-1">주차 (대)</label>
+                        <input type="number" id="inputParking" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">오픈/예약 예정일</label>
-                        <input type="date" id="inputOpenDate" required="" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-amber-500 focus:outline-none">
+                        <label class="block text-xs font-bold text-gray-700 mb-1">오픈/예약일</label>
+                        <input type="date" id="inputOpenDate" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none">
                     </div>
                 </div>
-
-                <!-- SNS / Web Page Links -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">
-                            <i class="fa-solid fa-globe text-emerald-600 mr-1"></i>웹사이트 주소 (URL)
-                        </label>
-                        <input type="url" id="inputVenueWebsite" placeholder="https://example.com" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-amber-500 focus:outline-none">
+                        <label class="block text-xs font-bold text-gray-700 mb-1">웹사이트 URL</label>
+                        <input type="url" id="inputVenueWebsite" placeholder="https://" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">
-                            <i class="fa-brands fa-instagram text-pink-600 mr-1"></i>인스타그램 주소 / 아이디
-                        </label>
-                        <input type="text" id="inputVenueInstagram" placeholder="@wedding_hall 또는 URL" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-amber-500 focus:outline-none">
+                        <label class="block text-xs font-bold text-gray-700 mb-1">인스타그램 URL/계정</label>
+                        <input type="text" id="inputVenueInstagram" placeholder="@계정" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none">
                     </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1">대표 사진 직접 업로드 (1장)</label>
-                    <input type="file" id="fileImg0" accept="image/*" class="w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100">
                 </div>
                 <div class="pt-4 flex items-center justify-end gap-3">
-                    <button type="button" id="venueDeleteBtn" onclick="requestDelete('venue', document.getElementById('inputVenueId').value)" class="mr-auto px-4 py-2.5 rounded-xl border border-red-200 text-xs font-bold text-red-500 hover:bg-red-50"><i class="fa-solid fa-trash mr-1"></i>삭제</button>
-                    <button type="button" onclick="closeVenueModal()" class="px-5 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50">취소</button>
+                    <button type="button" id="venueDeleteBtn" onclick="requestDelete('venue', document.getElementById('inputVenueId').value)" class="mr-auto px-4 py-2.5 rounded-xl border border-red-200 text-xs font-bold text-red-500 hover:bg-red-50 hidden">삭제</button>
+                    <button type="button" onclick="closeVenueModal()" class="px-5 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600">취소</button>
                     <button type="submit" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-md">저장하기</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Gallery Viewer Modal -->
-    <div id="galleryModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-3xl p-6 max-w-3xl w-full space-y-4 relative shadow-2xl">
-            <div class="flex justify-between items-center">
+    <!-- Generic Modal -->
+    <div id="genericModal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm items-center justify-center p-4 overflow-y-auto hidden">
+        <div class="glass-card bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full space-y-6 shadow-2xl relative my-8">
+            <button onclick="closeGenericModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <h3 id="genericModalTitle" class="text-xl font-bold text-gray-900">항목 정보</h3>
+            <form id="genericForm" onsubmit="handleGenericFormSubmit(event)" class="space-y-4">
+                <input type="hidden" id="inputGenericId">
                 <div>
-                    <h3 id="galleryTitle" class="text-lg font-bold text-gray-900">사진 갤러리</h3>
-                    <p class="text-xs text-gray-400">대표 사진 (1장)</p>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">항목명 / 업체명</label>
+                    <input type="text" id="inputGenericName" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none">
                 </div>
-                <div class="flex items-center gap-3">
-                    <label class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl cursor-pointer shadow transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-upload"></i> 대표 사진 변경
-                        <input type="file" id="galleryReplaceFileInput" accept="image/*" class="hidden" onchange="handleGalleryImageReplace(event)">
-                    </label>
-                    <button onclick="closeGalleryModal()" class="text-gray-400 hover:text-gray-600 text-xl"><i class="fa-solid fa-xmark"></i></button>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">설명 및 참고사항</label>
+                    <input type="text" id="inputGenericDesc" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none">
                 </div>
-            </div>
-            <div class="relative rounded-2xl overflow-hidden bg-black h-80 sm:h-96 group">
-                <img id="galleryMainImg" src="" class="w-full h-full object-contain">
-            </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">예상 견적 (원)</label>
+                        <input type="number" id="inputGenericPrice" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">평점</label>
+                        <input type="text" id="inputGenericRating" placeholder="4.9" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">웹사이트 URL</label>
+                    <input type="url" id="inputGenericWebsite" placeholder="https://" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">인스타그램 URL/계정</label>
+                    <input type="text" id="inputGenericInstagram" placeholder="@계정" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none">
+                </div>
+                <div class="pt-4 flex items-center justify-end gap-3">
+                    <button type="button" id="genericDeleteBtn" onclick="requestDelete(currentTab, document.getElementById('inputGenericId').value)" class="mr-auto px-4 py-2.5 rounded-xl border border-red-200 text-xs font-bold text-red-500 hover:bg-red-50 hidden">삭제</button>
+                    <button type="button" onclick="closeGenericModal()" class="px-5 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600">취소</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-md">저장하기</button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <!-- Delete Confirm Modal -->
-    <div id="confirmModal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/50 p-4" onclick="if(event.target===this)closeConfirm()">
+    <!-- Confirm Modal -->
+    <div id="confirmModal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/50 p-4">
         <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
-            <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2"><i class="fa-solid fa-trash text-red-500"></i> 삭제할까요?</h3>
+            <h3 class="text-lg font-bold text-gray-900"><i class="fa-solid fa-trash text-red-500"></i> 정말 삭제할까요?</h3>
             <p id="confirmMsg" class="text-sm text-gray-600"></p>
             <div class="flex justify-end gap-2">
-                <button onclick="closeConfirm()" class="px-5 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50">취소</button>
-                <button onclick="confirmDelete()" class="px-5 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-bold shadow-md">삭제</button>
+                <button onclick="closeConfirm()" class="px-5 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600">취소</button>
+                <button onclick="confirmDelete()" class="px-5 py-2.5 rounded-xl bg-red-500 text-white text-xs font-bold">삭제</button>
             </div>
         </div>
     </div>
@@ -497,156 +406,43 @@
                     <h3 id="mapTitle" class="font-bold text-lg text-gray-900"></h3>
                     <p id="mapAddress" class="text-xs text-gray-500 mt-0.5"></p>
                 </div>
-                <button onclick="closeMapModal()" class="text-gray-400 hover:text-gray-700 p-1" title="닫기"><i class="fa-solid fa-xmark text-lg"></i></button>
+                <button onclick="closeMapModal()" class="text-gray-400 hover:text-gray-700 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
-            <iframe id="mapFrame" class="w-full h-80 bg-gray-100 border-0" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="about:blank"></iframe>
-            <div class="flex flex-wrap gap-2 p-4 bg-amber-50/50">
-                <a id="mapLinkNaver" target="_blank" rel="noopener noreferrer" class="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition">네이버지도</a>
-                <a id="mapLinkKakao" target="_blank" rel="noopener noreferrer" class="px-3 py-2 rounded-xl bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-xs font-bold transition">카카오맵</a>
-                <a id="mapLinkGoogle" target="_blank" rel="noopener noreferrer" class="px-3 py-2 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold transition">구글지도</a>
-            </div>
+            <iframe id="mapFrame" class="w-full h-80 bg-gray-100 border-0" src="about:blank"></iframe>
         </div>
     </div>
 
     <script>
-        const LOUISVIS_IMG_1 = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200&q=80';
-
-        const DEFAULT_VENUES = [
-            {
-                id: 'v1',
-                name: '까사그랑데 센트럴',
-                location: '서울 서초구 신반포로 176 (고속터미널역)',
-                rentalFee: 8500000,
-                mealCost: 82000,
-                parking: 1200,
-                openDate: '2025-05-01',
-                website: 'https://casagrande.co.kr',
-                instagram: 'casagrande_official',
-                images: ['https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200&q=80']
-            },
-            {
-                id: 'v2',
-                name: '루이비스 컨벤션',
-                location: '서울 송파구 문정동 법원로 99',
-                rentalFee: 6500000,
-                mealCost: 75000,
-                parking: 1000,
-                openDate: '2025-04-15',
-                website: 'https://louisvis.co.kr',
-                instagram: 'louisvis_wedding',
-                images: [LOUISVIS_IMG_1]
-            },
-            {
-                id: 'v3',
-                name: '더링크 호텔',
-                location: '서울 구로구 경인로 610',
-                rentalFee: 11000000,
-                mealCost: 95000,
-                parking: 1500,
-                openDate: '2025-06-01',
-                website: 'https://thelinkhotel.com',
-                instagram: 'thelinkhotel_official',
-                images: ['https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80']
-            }
-        ];
-
-        const DEFAULT_SNAP = [
-            { id: 's1', name: '김태우 스튜디오', price: 1800000, desc: '본식 2인 스냅 + 데이터형 앨범 3권', rating: '4.9', website: '', instagram: 'taewoo_snap', images: ['https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&w=800&q=80'] },
-            { id: 's2', name: '아틀리에 피움', price: 2200000, desc: '대표 작가 지정촬영 + 아이폰 스냅 포함', rating: '4.8', website: '', instagram: 'atelier_pium', images: ['https://images.unsplash.com/photo-1606800052052-a08af7148866?auto=format&fit=crop&w=800&q=80'] }
-        ];
-
-        const DEFAULT_DRESS = [
-            { id: 'd1', name: '엔조최재훈', price: 2500000, desc: '블랙라벨 하이엔드 드레스, 투어비 5만원', rating: '4.9', website: 'https://choijaehoon.co.kr', instagram: 'enzochoijaehoon', images: ['https://images.unsplash.com/photo-1594552072238-b8a33785b261?auto=format&fit=crop&w=800&q=80'] },
-            { id: 'd2', name: '클라라 웨딩', price: 1900000, desc: '클래식 앤티크 레이스, 2차 피팅 포함', rating: '4.7', website: '', instagram: 'clarawedding_official', images: ['https://images.unsplash.com/photo-1566174053879-31528523f8ae?auto=format&fit=crop&w=800&q=80'] }
-        ];
-
-        const DEFAULT_MAKEUP = [
-            { id: 'm1', name: '정샘물 웨딩', price: 1200000, desc: '부원장 지정, 피부 베이스 특화, 본식+리허설 2회', rating: '4.9', website: 'https://jungsaemmool.com', instagram: 'jungsaemmool_wedding', images: ['https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=800&q=80'] },
-            { id: 'm2', name: '애브뉴준오', price: 1100000, desc: '음영 메이크업 강자, 헤어 피스 서비스', rating: '4.8', website: '', instagram: 'avenuejuno_wedding', images: ['https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=800&q=80'] }
-        ];
-
         let currentTab = 'venue';
-        let venues = [];
-        let snapList = [];
-        let dressList = [];
-        let makeupList = [];
-        let trousseauList = [];
-        let applianceList = [];
-        let ringList = [];
-        const DEFAULT_RING = [
-            { id: 'r1', name: '웨딩링 후보 1', price: 1500000, desc: '14K 커플링 세트', rating: '', location: '', website: '', instagram: '', images: [] },
-            { id: 'r2', name: '웨딩링 후보 2', price: 2200000, desc: '18K 다이아 세팅', rating: '', location: '', website: '', instagram: '', images: [] }
+        let venues = JSON.parse(localStorage.getItem('wedding_venues_db')) || [
+            { id: 'v1', name: '까사그랑데 센트럴', location: '서울 서초구 신반포로 176', rentalFee: 8500000, mealCost: 82000, parking: 1200, openDate: '2025-05-01', website: '', instagram: '' },
+            { id: 'v2', name: '루이비스 컨벤션', location: '서울 송파구 문정동', rentalFee: 6500000, mealCost: 75000, parking: 1000, openDate: '2025-04-15', website: '', instagram: '' },
+            { id: 'v3', name: '더링크 호텔', location: '서울 구로구 경인로 610', rentalFee: 11000000, mealCost: 95000, parking: 1500, openDate: '2025-06-01', website: '', instagram: '' }
         ];
 
-        const DEFAULT_TROUSSEAU = [
-            { id: 't1', name: '침대 · 매트리스', price: 2500000, desc: '프레임 + 매트리스 세트', rating: '', website: '', instagram: '', images: [] },
-            { id: 't2', name: '소파', price: 1800000, desc: '3인용 패브릭 / 가죽 비교', rating: '', website: '', instagram: '', images: [] }
-        ];
-        const DEFAULT_APPLIANCE = [
-            { id: 'a1', name: '냉장고', price: 3000000, desc: '4도어 / 양문형 비교', rating: '', website: '', instagram: '', images: [] },
-            { id: 'a2', name: '세탁기 · 건조기', price: 2800000, desc: '세트 구매 시 할인 확인', rating: '', website: '', instagram: '', images: [] }
-        ];
-        const DEFAULT_CHECKLISTS = {
-            trousseau: ['침대', '매트리스', '소파', '식탁', '옷장'].map((t, i) => ({ id: 'c_t' + i, text: t, done: false })),
-            appliance: ['냉장고', '세탁기', '건조기', 'TV', '에어컨'].map((t, i) => ({ id: 'c_a' + i, text: t, done: false }))
-        };
-        let checklists = JSON.parse(JSON.stringify(DEFAULT_CHECKLISTS));
-        const GOODS_TABS = ['trousseau', 'appliance'];
-        function isGoodsTab(tab) { return GOODS_TABS.indexOf(tab) !== -1; }
+        let snapList = JSON.parse(localStorage.getItem('wedding_snap_db')) || [];
+        let dressList = JSON.parse(localStorage.getItem('wedding_dress_db')) || [];
+        let makeupList = JSON.parse(localStorage.getItem('wedding_makeup_db')) || [];
+        let trousseauList = JSON.parse(localStorage.getItem('wedding_trousseau_db')) || [];
+        let applianceList = JSON.parse(localStorage.getItem('wedding_appliance_db')) || [];
+        let ringList = JSON.parse(localStorage.getItem('wedding_ring_db')) || [];
+        let checklists = JSON.parse(localStorage.getItem('wedding_checklist_db')) || { trousseau: [], appliance: [] };
+        let guestCount = Number(localStorage.getItem('wedding_guest_count')) || 100;
+
         function getTabList(tab) {
             return ({ snap: snapList, dress: dressList, makeup: makeupList, ring: ringList, trousseau: trousseauList, appliance: applianceList })[tab];
         }
-
-        let currentGalleryVenueId = null;
-
-        function loadVenues() {
-            venues = JSON.parse(localStorage.getItem('wedding_venues_db')) || DEFAULT_VENUES;
-            snapList = JSON.parse(localStorage.getItem('wedding_snap_db')) || DEFAULT_SNAP;
-            dressList = JSON.parse(localStorage.getItem('wedding_dress_db')) || DEFAULT_DRESS;
-            makeupList = JSON.parse(localStorage.getItem('wedding_makeup_db')) || DEFAULT_MAKEUP;
-            trousseauList = JSON.parse(localStorage.getItem('wedding_trousseau_db')) || DEFAULT_TROUSSEAU;
-            applianceList = JSON.parse(localStorage.getItem('wedding_appliance_db')) || DEFAULT_APPLIANCE;
-            ringList = JSON.parse(localStorage.getItem('wedding_ring_db')) || DEFAULT_RING;
-            try {
-                const c = JSON.parse(localStorage.getItem('wedding_checklist_db'));
-                if (c && typeof c === 'object') checklists = { trousseau: c.trousseau || [], appliance: c.appliance || [] };
-            } catch (e) {}
-
-            // 데이터 정리 시 사진 무조건 1개만 남기기
-            [venues, snapList, dressList, makeupList, trousseauList, applianceList, ringList].forEach(list => {
-                list.forEach(item => {
-                    if (Array.isArray(item.images)) item.images = item.images.slice(0, 1);
-                });
-            });
-
-            window.venues = venues;
-            window.snapList = snapList;
-            window.dressList = dressList;
-            window.makeupList = makeupList;
-            window.trousseauList = trousseauList;
-            window.applianceList = applianceList;
-            window.ringList = ringList;
-        }
-
-        let lastSaveOk = true;
 
         function showToast(title, msg, isError) {
             const toast = document.getElementById('saveToast');
             if (!toast) return;
             document.getElementById('toastTitle').innerText = title;
             document.getElementById('toastMsg').innerText = msg;
-            document.getElementById('toastTitle').className = 'text-xs font-bold ' + (isError ? 'text-red-300' : 'text-amber-200');
-            document.getElementById('toastIcon').className = 'w-7 h-7 rounded-full text-white flex items-center justify-center shrink-0 ' + (isError ? 'bg-red-500' : 'bg-amber-500');
-            document.getElementById('toastIcon').innerHTML = isError ? '<i class="fa-solid fa-exclamation text-xs"></i>' : '<i class="fa-solid fa-check text-xs"></i>';
             toast.classList.remove('translate-y-20', 'opacity-0');
-            clearTimeout(window.__toastTimer);
-            window.__toastTimer = setTimeout(() => {
-                toast.classList.add('translate-y-20', 'opacity-0');
-            }, isError ? 5000 : 3000);
+            setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3000);
         }
 
         function saveVenues() {
-            lastSaveOk = true;
             try {
                 localStorage.setItem('wedding_venues_db', JSON.stringify(venues));
                 localStorage.setItem('wedding_snap_db', JSON.stringify(snapList));
@@ -655,28 +451,21 @@
                 localStorage.setItem('wedding_trousseau_db', JSON.stringify(trousseauList));
                 localStorage.setItem('wedding_appliance_db', JSON.stringify(applianceList));
                 localStorage.setItem('wedding_ring_db', JSON.stringify(ringList));
-            } catch (err) {
-                lastSaveOk = false;
-                console.error('Local save failed:', err);
-                showToast('저장 실패', '브라우저 저장 공간이 부족해요.', true);
-            }
+            } catch (e) {}
 
             if (typeof window.saveToCloud === 'function') {
-                window.saveToCloud({ venues, snapList, dressList, makeupList, trousseauList, applianceList, ringList, checklists }).then(ok => {
-                    if (ok === false) showToast('클라우드 저장 실패', '온라인 동기화에 실패했어요.', true);
-                });
+                window.saveToCloud({ venues, snapList, dressList, makeupList, trousseauList, applianceList, ringList, checklists });
             }
             render();
-            return lastSaveOk;
+            return true;
         }
 
         function manualSaveVenues() {
-            if (saveVenues()) showToast('데이터 저장 완료', '변경사항이 정상적으로 저장되었습니다.', false);
+            saveVenues();
+            showToast('데이터 저장 완료', '모든 변경 사항이 저장되었습니다.', false);
         }
 
-        function showSaveToast() {}
-
-        window.applyCloudData = function (cloud) {
+        window.applyCloudData = function(cloud) {
             if (cloud.list) venues = cloud.list;
             if (cloud.snapList) snapList = cloud.snapList;
             if (cloud.dressList) dressList = cloud.dressList;
@@ -684,54 +473,24 @@
             if (cloud.trousseauList) trousseauList = cloud.trousseauList;
             if (cloud.applianceList) applianceList = cloud.applianceList;
             if (cloud.ringList) ringList = cloud.ringList;
-            if (cloud.checklists) checklists = { trousseau: cloud.checklists.trousseau || [], appliance: cloud.checklists.appliance || [] };
-            
-            [venues, snapList, dressList, makeupList, trousseauList, applianceList, ringList].forEach(list => {
-                list.forEach(item => {
-                    if (Array.isArray(item.images)) item.images = item.images.slice(0, 1);
-                });
-            });
-
-            window.venues = venues; window.snapList = snapList; window.dressList = dressList; window.makeupList = makeupList;
             render();
         };
 
-        function formatKRW(amount) {
-            return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(amount || 0);
+        function formatKRW(amt) {
+            return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(amt || 0);
         }
 
-        function formatUrl(url) {
-            if (!url) return '';
-            if (url.startsWith('http://') || url.startsWith('https://')) return url;
-            return 'https://' + url;
-        }
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.nav-tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tabBtn-${tab}`).classList.add('active');
 
-        function formatInstagramUrl(ig) {
-            if (!ig) return '';
-            if (ig.startsWith('http://') || ig.startsWith('https://')) return ig;
-            const handle = ig.startsWith('@') ? ig.slice(1) : ig;
-            return `https://instagram.com/${handle}`;
-        }
+            const isVenue = (tab === 'venue');
+            document.getElementById('tabContent-venue').classList.toggle('hidden', !isVenue);
+            document.getElementById('tabContent-generic').classList.toggle('hidden', isVenue);
 
-        function switchTab(tabName) {
-            currentTab = tabName;
-            document.querySelectorAll('.nav-tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(`tabBtn-${tabName}`).classList.add('active');
-
-            const venueContainer = document.getElementById('tabContent-venue');
-            const genericContainer = document.getElementById('tabContent-generic');
-
-            if (tabName === 'venue') {
-                venueContainer.classList.remove('hidden');
-                genericContainer.classList.add('hidden');
-            } else {
-                venueContainer.classList.add('hidden');
-                genericContainer.classList.remove('hidden');
-
-                const titleMap = { snap: '📸 스냅 / 본식 스냅 업체 리스트', dress: '👗 드레스 숍 비교', makeup: '💄 메이크업 / 헤어 숍 비교', ring: '💍 웨딩링 비교', trousseau: '🛋️ 혼수 항목 비교', appliance: '🔌 가전 비교' };
-                document.getElementById('genericTabTitle').innerText = titleMap[tabName];
-                document.getElementById('genericAddBtnText').innerText = isGoodsTab(tabName) ? '새 품목 추가' : '새 업체 추가';
-            }
+            const titles = { snap: '스냅 업체 리스트', dress: '드레스 숍 리스트', makeup: '메이크업 숍 리스트', ring: '웨딩링 리스트', trousseau: '혼수 리스트', appliance: '가전 리스트' };
+            if (!isVenue) document.getElementById('genericTabTitle').innerText = titles[tab] || '업체 리스트';
             render();
         }
 
@@ -747,93 +506,56 @@
 
         function renderSummary() {
             document.getElementById('statTotalVenues').innerText = `${venues.length} 곳`;
-            if (venues.length === 0) {
-                ['statMinMeal', 'statMinRental', 'statMaxParking'].forEach(id => { document.getElementById(id).innerText = '-'; });
-                ['statMinMealName', 'statMinRentalName', 'statMaxParkingName'].forEach(id => { document.getElementById(id).innerText = ''; });
-                return;
-            }
-
-            const minMeal = [...venues].sort((a, b) => a.mealCost - b.mealCost)[0];
-            document.getElementById('statMinMeal').innerText = formatKRW(minMeal.mealCost);
-            document.getElementById('statMinMealName').innerText = minMeal.name;
-
-            const minRental = [...venues].sort((a, b) => a.rentalFee - b.rentalFee)[0];
-            document.getElementById('statMinRental').innerText = formatKRW(minRental.rentalFee);
-            document.getElementById('statMinRentalName').innerText = minRental.name;
-
-            const maxPark = [...venues].sort((a, b) => b.parking - a.parking)[0];
-            document.getElementById('statMaxParking').innerText = `${maxPark.parking.toLocaleString()} 대`;
-            document.getElementById('statMaxParkingName').innerText = maxPark.name;
+            if (!venues.length) return;
+            const minM = [...venues].sort((a,b)=>a.mealCost-b.mealCost)[0];
+            const minR = [...venues].sort((a,b)=>a.rentalFee-b.rentalFee)[0];
+            const maxP = [...venues].sort((a,b)=>b.parking-a.parking)[0];
+            document.getElementById('statMinMeal').innerText = formatKRW(minM.mealCost);
+            document.getElementById('statMinRental').innerText = formatKRW(minR.rentalFee);
+            document.getElementById('statMaxParking').innerText = `${maxP.parking.toLocaleString()} 대`;
         }
 
         function renderCards() {
             const grid = document.getElementById('venueGrid');
             if (!venues.length) {
-                grid.innerHTML = `<div class="col-span-full py-12 text-center text-gray-400 bg-white rounded-2xl border border-amber-100">등록된 예식장이 없습니다.</div>`;
+                grid.innerHTML = `<div class="col-span-full py-12 text-center text-gray-400 bg-white rounded-2xl">등록된 예식장이 없습니다.</div>`;
                 return;
             }
-            grid.innerHTML = venues.map((v) => {
-                const webLink = formatUrl(v.website);
-                const igLink = formatInstagramUrl(v.instagram);
-                const img = (v.images && v.images[0]) ? v.images[0] : '';
-
-                return `
-                <div class="glass-card rounded-3xl overflow-hidden shadow-sm p-6 space-y-4 flex flex-col justify-between">
-                    <div class="space-y-4">
-                        <div class="relative h-48 -mx-6 -mt-6 bg-gray-100 overflow-hidden cursor-pointer group" onclick="openGalleryModal('${v.id}')">
-                            ${img ? `<img src="${img}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">` : `<div class="w-full h-full flex items-center justify-center text-gray-400">사진 없음</div>`}
-                            <div class="absolute bottom-3 right-3 bg-black/60 text-white text-[11px] px-2.5 py-1 rounded-xl font-medium backdrop-blur-sm">
-                                <i class="fa-solid fa-camera mr-1"></i> 대표 사진
+            grid.innerHTML = venues.map(v => `
+                <div class="glass-card rounded-3xl p-6 space-y-4 flex flex-col justify-between shadow-sm">
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-900">${v.name}</h3>
+                                <p class="text-xs text-gray-500 mt-0.5"><i class="fa-solid fa-location-dot text-amber-500 mr-1"></i>${v.location}</p>
+                            </div>
+                            <div class="flex gap-1">
+                                <button onclick="openVenueModal('${v.id}')" class="w-8 h-8 flex items-center justify-center text-xs bg-amber-50 text-amber-700 rounded-xl hover:bg-amber-100"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="requestDelete('venue', '${v.id}')" class="w-8 h-8 flex items-center justify-center text-xs bg-red-50 text-red-500 rounded-xl hover:bg-red-100"><i class="fa-solid fa-trash"></i></button>
                             </div>
                         </div>
-
-                        <div class="flex justify-between items-start gap-2 pt-1 h-[68px]">
-                            <div class="min-w-0 flex-1">
-                                <h3 class="font-bold text-lg text-gray-900 truncate" title="${v.name}">${v.name}</h3>
-                                <p class="text-xs text-gray-500 mt-0.5 clamp-2 h-8 leading-4" title="${v.location}"><i class="fa-solid fa-location-dot text-amber-500 mr-1"></i>${v.location}</p>
-                            </div>
-                            <div class="flex gap-1 shrink-0">
-                                <button onclick="openVenueModal('${v.id}')" title="웨딩홀 전체 수정" class="shrink-0 w-9 h-9 flex items-center justify-center text-xs bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-xl transition">
-                                    <i class="fa-solid fa-pen"></i>
-                                </button>
-                                <button onclick="requestDelete('venue', '${v.id}')" title="삭제" class="shrink-0 w-9 h-9 flex items-center justify-center text-xs bg-red-50 text-red-500 hover:bg-red-100 rounded-xl transition"><i class="fa-solid fa-trash"></i></button>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center justify-between gap-1 bg-amber-50/40 px-2 h-[52px] rounded-2xl border border-amber-100/50">
-                            <div class="flex items-center gap-2 min-w-0 whitespace-nowrap">
-                                ${webLink ? `<a href="${webLink}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-semibold transition"><i class="fa-solid fa-globe"></i> 웹사이트</a>` : `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-100 text-gray-400 text-xs font-medium"><i class="fa-solid fa-globe"></i> 링크 없음</span>`}
-                                ${igLink ? `<a href="${igLink}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-pink-50 text-pink-600 hover:bg-pink-100 text-xs font-semibold transition"><i class="fa-brands fa-instagram"></i> 인스타그램</a>` : `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-100 text-gray-400 text-xs font-medium"><i class="fa-brands fa-instagram"></i> 링크 없음</span>`}
-                            </div>
-                            <button onclick="quickEditLinks('venue', '${v.id}')" title="링크 직접 수정" class="text-xs text-gray-400 hover:text-amber-600 p-1.5 rounded-lg transition hover:bg-white">
-                                <i class="fa-solid fa-link text-xs"></i>
-                            </button>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-2 text-xs pt-3 border-t border-amber-100/60">
-                            <div class="bg-amber-50/50 p-2.5 rounded-xl h-[54px] flex flex-col justify-center whitespace-nowrap">
+                        <div class="grid grid-cols-2 gap-2 text-xs pt-2">
+                            <div class="bg-amber-50/50 p-2.5 rounded-xl">
                                 <span class="text-gray-400 block text-[10px]">대관료</span>
                                 <span class="font-bold text-gray-800">${formatKRW(v.rentalFee)}</span>
                             </div>
-                            <div class="bg-amber-50/50 p-2.5 rounded-xl h-[54px] flex flex-col justify-center whitespace-nowrap">
+                            <div class="bg-amber-50/50 p-2.5 rounded-xl">
                                 <span class="text-gray-400 block text-[10px]">식대 (1인)</span>
                                 <span class="font-bold text-amber-600">${formatKRW(v.mealCost)}</span>
                             </div>
                         </div>
                     </div>
-
-                    <div class="flex justify-between items-center gap-2 text-xs text-gray-500 pt-3 border-t border-amber-100 whitespace-nowrap">
-                        <span><i class="fa-solid fa-square-parking text-amber-500 mr-1"></i>${v.parking.toLocaleString()}대</span>
-                        <span class="text-[11px] text-gray-400">오픈: ${v.openDate || '-'}</span>
+                    <div class="flex justify-between items-center text-xs text-gray-500 pt-3 border-t border-amber-100">
+                        <span><i class="fa-solid fa-square-parking text-amber-500 mr-1"></i>${v.parking}대</span>
+                        <span>오픈: ${v.openDate || '-'}</span>
                     </div>
                 </div>
-            `}).join('');
+            `).join('');
         }
-
-        let guestCount = 100;
 
         function setGuestCount(val) {
             guestCount = Math.max(0, Number(val) || 0);
+            localStorage.setItem('wedding_guest_count', guestCount);
             renderTable();
         }
 
@@ -843,370 +565,188 @@
                 const total = (v.rentalFee || 0) + (v.mealCost || 0) * guestCount;
                 return `
                 <tr class="hover:bg-amber-50/40 transition">
-                    <td class="p-3 font-bold text-gray-900 whitespace-nowrap">${v.name}</td>
-                    <td class="p-3 whitespace-nowrap">
-                        <button onclick="openMapModal('${v.id}')" title="지도 보기" class="text-left whitespace-nowrap text-gray-600 hover:text-amber-600 hover:underline underline-offset-2 transition">
-                            <i class="fa-solid fa-location-dot text-amber-500 mr-1"></i>${v.location}
-                        </button>
-                    </td>
-                    <td class="p-3 text-right font-medium whitespace-nowrap">${formatKRW(v.rentalFee)}</td>
-                    <td class="p-3 text-right font-medium whitespace-nowrap">${formatKRW(v.mealCost)}</td>
-                    <td class="p-3 text-right whitespace-nowrap">
-                        <div class="font-bold text-amber-600">${formatKRW(total)}</div>
-                        <div class="text-[10px] text-gray-400">식대 × ${guestCount.toLocaleString()}명 포함</div>
-                    </td>
-                    <td class="p-3 text-center whitespace-nowrap">${(v.parking || 0).toLocaleString()}대</td>
-                    <td class="p-3 text-center text-gray-500 text-xs whitespace-nowrap">${v.openDate || '-'}</td>
+                    <td class="p-3 font-bold text-gray-900">${v.name}</td>
+                    <td class="p-3 text-gray-600">${v.location}</td>
+                    <td class="p-3 text-right font-medium">${formatKRW(v.rentalFee)}</td>
+                    <td class="p-3 text-right font-medium">${formatKRW(v.mealCost)}</td>
+                    <td class="p-3 text-right font-bold text-amber-600">${formatKRW(total)}</td>
+                    <td class="p-3 text-center">${v.parking}대</td>
                     <td class="p-3 text-center">
-                        <button onclick="openVenueModal('${v.id}')" class="text-xs text-amber-600 hover:text-amber-800 font-bold whitespace-nowrap">수정</button>
-                        <button onclick="requestDelete('venue', '${v.id}')" class="text-xs text-red-400 hover:text-red-600 font-bold whitespace-nowrap ml-2">삭제</button>
+                        <button onclick="openVenueModal('${v.id}')" class="text-xs text-amber-600 font-bold">수정</button>
+                        <button onclick="requestDelete('venue', '${v.id}')" class="text-xs text-red-400 font-bold ml-2">삭제</button>
                     </td>
                 </tr>
             `}).join('');
         }
 
-        function openMapModal(venueId, tab) {
-            const mapList = (!tab || tab === 'venue') ? venues : (getTabList(tab) || []);
-            const v = mapList.find(item => item.id === venueId);
-            if (!v) return;
-            const q = encodeURIComponent(v.location);
-            document.getElementById('mapTitle').innerText = v.name;
-            document.getElementById('mapAddress').innerText = v.location;
-            document.getElementById('mapFrame').src = `https://maps.google.com/maps?q=${q}&hl=ko&z=16&output=embed`;
-            document.getElementById('mapLinkNaver').href = `https://map.naver.com/p/search/${q}`;
-            document.getElementById('mapLinkKakao').href = `https://map.kakao.com/?q=${q}`;
-            document.getElementById('mapLinkGoogle').href = `https://www.google.com/maps/search/?api=1&query=${q}`;
-            const modal = document.getElementById('mapModal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-
-        function closeMapModal() {
-            const modal = document.getElementById('mapModal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            document.getElementById('mapFrame').src = 'about:blank';
-        }
-
-        function exportToStandaloneHtml() {
-            const htmlContent = document.documentElement.outerHTML;
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'index.html';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
         function renderGenericGrid() {
-            const container = document.getElementById('genericGrid');
-            let data = getTabList(currentTab);
-
-            if (!data || data.length === 0) {
-                container.innerHTML = `<div class="col-span-full py-12 text-center text-gray-400 bg-white rounded-2xl border border-amber-100">등록된 항목이 없습니다.</div>`;
+            const list = getTabList(currentTab) || [];
+            const grid = document.getElementById('genericGrid');
+            if (!list.length) {
+                grid.innerHTML = `<div class="col-span-full py-12 text-center text-gray-400 bg-white rounded-2xl">등록된 항목이 없습니다.</div>`;
                 return;
             }
-
-            container.innerHTML = data.map(item => {
-                const webLink = formatUrl(item.website);
-                const igLink = formatInstagramUrl(item.instagram);
-                const img = (item.images && item.images[0]) ? item.images[0] : '';
-
-                return `
-                <div class="glass-card rounded-2xl overflow-hidden shadow-sm p-5 space-y-3 flex flex-col justify-between">
+            grid.innerHTML = list.map(item => `
+                <div class="glass-card rounded-2xl p-5 space-y-3 flex flex-col justify-between shadow-sm">
                     <div>
-                        <div class="relative h-40 -mx-5 -mt-5 mb-3 bg-gradient-to-br from-amber-50 to-amber-100 overflow-hidden cursor-pointer group" onclick="openGalleryModal('${item.id}', '${currentTab}')">
-                            ${img ? `<img src="${img}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">` : `<div class="w-full h-full flex items-center justify-center text-gray-400">사진 없음</div>`}
-                            <div class="absolute bottom-2 right-2 bg-black/60 text-white text-[11px] px-2 py-0.5 rounded-lg backdrop-blur-sm"><i class="fa-solid fa-camera mr-1"></i>대표 사진</div>
-                        </div>
-                        <div class="flex justify-between items-center gap-2 pb-2 border-b border-amber-100 h-11">
-                            <h3 class="font-bold text-base text-gray-900 truncate min-w-0 flex-1" title="${item.name}">${item.name}</h3>
-                            <div class="flex items-center gap-2 shrink-0">
-                                ${item.rating ? `<span class="text-xs bg-amber-50 text-amber-700 font-semibold px-2 py-0.5 rounded">★ ${item.rating}</span>` : ''}
-                                <button onclick="openGenericModal('${item.id}')" title="수정" class="text-xs text-gray-400 hover:text-amber-600 p-1">
-                                    <i class="fa-solid fa-pen"></i>
-                                </button>
-                                <button onclick="requestDelete('${currentTab}', '${item.id}')" title="삭제" class="text-xs text-gray-400 hover:text-red-500 p-1"><i class="fa-solid fa-trash"></i></button>
+                        <div class="flex justify-between items-center pb-2 border-b border-amber-100">
+                            <h3 class="font-bold text-base text-gray-900">${item.name}</h3>
+                            <div class="flex items-center gap-1">
+                                <button onclick="openGenericModal('${item.id}')" class="text-xs text-gray-400 hover:text-amber-600 p-1"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="requestDelete('${currentTab}', '${item.id}')" class="text-xs text-gray-400 hover:text-red-500 p-1"><i class="fa-solid fa-trash"></i></button>
                             </div>
                         </div>
-                        <p class="text-xs text-gray-600 mt-2 clamp-2 h-8 leading-4" title="${item.desc || ''}">${item.desc || '세부 정보 없음'}</p>
-                        
-                        <div class="flex items-center justify-between gap-1 mt-3 pt-2 border-t border-amber-50 h-12 whitespace-nowrap">
-                            <div class="flex items-center gap-2">
-                                ${webLink ? `<a href="${webLink}" target="_blank" class="text-xs text-blue-600 font-medium hover:underline flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-md"><i class="fa-solid fa-globe"></i> 웹사이트</a>` : `<span class="text-xs text-gray-400"><i class="fa-solid fa-globe"></i> 미입력</span>`}
-                                ${igLink ? `<a href="${igLink}" target="_blank" class="text-xs text-pink-600 font-medium hover:underline flex items-center gap-1 bg-pink-50 px-2 py-1 rounded-md"><i class="fa-brands fa-instagram"></i> 인스타</a>` : `<span class="text-xs text-gray-400"><i class="fa-brands fa-instagram"></i> 미입력</span>`}
-                            </div>
-                            <button onclick="quickEditLinks('${currentTab}', '${item.id}')" title="링크 직접 수정" class="text-xs text-amber-600 hover:bg-amber-50 px-2 py-1 rounded-md font-bold transition">
-                                <i class="fa-solid fa-link text-xs"></i> 링크 수정
-                            </button>
-                        </div>
+                        <p class="text-xs text-gray-600 mt-2">${item.desc || '설명 없음'}</p>
                     </div>
-                    <div class="pt-3 border-t border-amber-100 flex justify-between items-center whitespace-nowrap">
+                    <div class="pt-3 border-t border-amber-100 flex justify-between items-center">
                         <span class="text-xs text-gray-400">예상 견적:</span>
                         <span class="font-bold text-amber-600 text-sm">${formatKRW(item.price)}</span>
                     </div>
                 </div>
-            `}).join('');
+            `).join('');
         }
 
         let pendingDelete = null;
-
-        function getListForTab(tab) {
-            return tab === 'venue' ? venues : getTabList(tab);
-        }
-
         function requestDelete(tab, id) {
-            const list = getListForTab(tab) || [];
-            const item = list.find(x => x.id === id);
-            if (!item) return;
             pendingDelete = { tab, id };
-            document.getElementById('confirmMsg').innerText = `'${item.name}' 항목을 삭제하시겠습니까?`;
+            document.getElementById('confirmMsg').innerText = `정말 삭제하시겠습니까?`;
             const m = document.getElementById('confirmModal');
             m.classList.remove('hidden');
             m.classList.add('flex');
         }
-
         function closeConfirm() {
-            const m = document.getElementById('confirmModal');
-            m.classList.add('hidden');
-            m.classList.remove('flex');
+            document.getElementById('confirmModal').classList.add('hidden');
+            document.getElementById('confirmModal').classList.remove('flex');
             pendingDelete = null;
         }
-
         function confirmDelete() {
             if (!pendingDelete) return;
             const { tab, id } = pendingDelete;
-            const list = getListForTab(tab) || [];
-            const idx = list.findIndex(x => x.id === id);
-            if (idx !== -1) list.splice(idx, 1);
+            if (tab === 'venue') {
+                venues = venues.filter(v => v.id !== id);
+            } else {
+                let list = getTabList(tab);
+                if (list) {
+                    const idx = list.findIndex(x => x.id === id);
+                    if (idx !== -1) list.splice(idx, 1);
+                }
+            }
             closeConfirm();
             closeVenueModal();
             closeGenericModal();
-            closeGalleryModal();
             saveVenues();
         }
 
-        function quickEditLinks(type, id) {
-            let item = (type === 'venue' ? venues : getTabList(type)).find(v => v.id === id);
-            if (!item) return;
-
-            const newWebsite = prompt(`[${item.name}] 웹사이트 URL:`, item.website || '');
-            if (newWebsite === null) return;
-
-            const newInstagram = prompt(`[${item.name}] 인스타그램 (@계정 또는 URL):`, item.instagram || '');
-            if (newInstagram === null) return;
-
-            item.website = newWebsite.trim();
-            item.instagram = newInstagram.trim();
-
-            saveVenues();
-        }
-
-        function openGenericModal(itemId = null) {
-            let list = getTabList(currentTab);
-            const modal = document.getElementById('genericModal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            document.getElementById('genericDeleteBtn').classList.toggle('hidden', !itemId);
-
-            if (itemId) {
-                const target = list.find(item => item.id === itemId);
-                document.getElementById('genericModalTitle').innerText = '정보 수정';
-                document.getElementById('inputGenericId').value = target.id;
-                document.getElementById('inputGenericName').value = target.name || '';
-                document.getElementById('inputGenericDesc').value = target.desc || '';
-                document.getElementById('inputGenericPrice').value = target.price || 0;
-                document.getElementById('inputGenericRating').value = target.rating || '5.0';
-                document.getElementById('inputGenericWebsite').value = target.website || '';
-                document.getElementById('inputGenericInstagram').value = target.instagram || '';
-                document.getElementById('inputGenericLocation').value = target.location || '';
-            } else {
-                document.getElementById('genericModalTitle').innerText = '새 항목 추가';
-                document.getElementById('genericForm').reset();
-                document.getElementById('inputGenericId').value = '';
-            }
-        }
-
-        function closeGenericModal() {
-            const modal = document.getElementById('genericModal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }
-
-        async function handleGenericFormSubmit(e) {
-            e.preventDefault();
-            const id = document.getElementById('inputGenericId').value;
-            const name = document.getElementById('inputGenericName').value;
-            const desc = document.getElementById('inputGenericDesc').value;
-            const price = Number(document.getElementById('inputGenericPrice').value);
-            const rating = document.getElementById('inputGenericRating').value || '5.0';
-            const website = document.getElementById('inputGenericWebsite').value;
-            const instagram = document.getElementById('inputGenericInstagram').value;
-            const location = document.getElementById('inputGenericLocation').value.trim();
-
-            let list = getTabList(currentTab);
-            const existing = id ? list.find(item => item.id === id) : null;
-            let images = existing && existing.images ? [...existing.images] : [];
-
-            const fi = document.getElementById('gFile0');
-            if (fi && fi.files && fi.files[0]) {
-                images[0] = await readFileAsBase64(fi.files[0]);
-            }
-            images = images.slice(0, 1).filter(Boolean);
-
-            if (existing) {
-                const idx = list.findIndex(item => item.id === id);
-                list[idx] = { ...list[idx], name, desc, price, rating, website, instagram, location, images };
-            } else {
-                list.push({ id: 'item_' + Date.now(), name, desc, price, rating, website, instagram, location, images });
-            }
-
-            if (saveVenues()) {
-                closeGenericModal();
-            }
-            const el = document.getElementById('gFile0');
-            if (el) el.value = '';
-        }
-
-        function openVenueModal(venueId = null) {
+        function openVenueModal(id = null) {
             const modal = document.getElementById('venueModal');
-            const title = document.getElementById('modalTitle');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
-            document.getElementById('venueDeleteBtn').classList.toggle('hidden', !venueId);
-
-            if (venueId) {
-                const target = venues.find(v => v.id === venueId);
-                title.innerText = '예식장 정보 수정';
-                document.getElementById('inputVenueId').value = target.id;
-                document.getElementById('inputVenueName').value = target.name;
-                document.getElementById('inputVenueLocation').value = target.location;
-                document.getElementById('inputVenueWebsite').value = target.website || '';
-                document.getElementById('inputVenueInstagram').value = target.instagram || '';
-                document.getElementById('inputVenueRental').value = target.rentalFee;
-                document.getElementById('inputVenueMeal').value = target.mealCost;
-                document.getElementById('inputParking').value = target.parking;
-                document.getElementById('inputOpenDate').value = target.openDate || '';
+            document.getElementById('venueDeleteBtn').classList.toggle('hidden', !id);
+            if (id) {
+                const v = venues.find(x => x.id === id);
+                document.getElementById('inputVenueId').value = v.id;
+                document.getElementById('inputVenueName').value = v.name;
+                document.getElementById('inputVenueLocation').value = v.location;
+                document.getElementById('inputVenueRental').value = v.rentalFee;
+                document.getElementById('inputVenueMeal').value = v.mealCost;
+                document.getElementById('inputParking').value = v.parking;
+                document.getElementById('inputOpenDate').value = v.openDate || '';
+                document.getElementById('inputVenueWebsite').value = v.website || '';
+                document.getElementById('inputVenueInstagram').value = v.instagram || '';
             } else {
-                title.innerText = '새 예식장 추가';
                 document.getElementById('venueForm').reset();
                 document.getElementById('inputVenueId').value = '';
             }
         }
-
         function closeVenueModal() {
-            const modal = document.getElementById('venueModal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
+            document.getElementById('venueModal').classList.add('hidden');
+            document.getElementById('venueModal').classList.remove('flex');
         }
 
-        async function handleVenueFormSubmit(e) {
+        function handleVenueFormSubmit(e) {
             e.preventDefault();
             const id = document.getElementById('inputVenueId').value;
-            const name = document.getElementById('inputVenueName').value;
-            const location = document.getElementById('inputVenueLocation').value;
-            const rentalFee = Number(document.getElementById('inputVenueRental').value);
-            const mealCost = Number(document.getElementById('inputVenueMeal').value);
-            const parking = Number(document.getElementById('inputParking').value);
-            const openDate = document.getElementById('inputOpenDate').value;
-            const website = document.getElementById('inputVenueWebsite').value;
-            const instagram = document.getElementById('inputVenueInstagram').value;
-
-            let existingVenue = venues.find(v => v.id === id);
-            let images = existingVenue && existingVenue.images ? [...existingVenue.images] : [LOUISVIS_IMG_1];
-
-            const fileInput = document.getElementById('fileImg0');
-            if (fileInput && fileInput.files && fileInput.files[0]) {
-                images[0] = await readFileAsBase64(fileInput.files[0]);
-            }
-            images = images.slice(0, 1);
-
+            const data = {
+                id: id || ('v_' + Date.now()),
+                name: document.getElementById('inputVenueName').value,
+                location: document.getElementById('inputVenueLocation').value,
+                rentalFee: Number(document.getElementById('inputVenueRental').value),
+                mealCost: Number(document.getElementById('inputVenueMeal').value),
+                parking: Number(document.getElementById('inputParking').value),
+                openDate: document.getElementById('inputOpenDate').value,
+                website: document.getElementById('inputVenueWebsite').value,
+                instagram: document.getElementById('inputVenueInstagram').value
+            };
             if (id) {
                 const idx = venues.findIndex(v => v.id === id);
-                venues[idx] = { id, name, location, rentalFee, mealCost, parking, openDate, website, instagram, images };
+                if (idx !== -1) venues[idx] = data;
             } else {
-                venues.push({ id: 'v_' + Date.now(), name, location, rentalFee, mealCost, parking, openDate, website, instagram, images });
+                venues.push(data);
             }
-
-            if (saveVenues()) {
-                closeVenueModal();
-            }
+            closeVenueModal();
+            saveVenues();
         }
 
-        function readFileAsBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onerror = reject;
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.onerror = () => resolve(e.target.result);
-                    img.onload = () => {
-                        const MAX = 800;
-                        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
-                        const canvas = document.createElement('canvas');
-                        canvas.width = Math.round(img.width * scale);
-                        canvas.height = Math.round(img.height * scale);
-                        const ctx = canvas.getContext('2d');
-                        ctx.fillStyle = '#fff';
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.65));
-                    };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-
-        let currentGalleryTab = 'venue';
-
-        function getGalleryItem() {
-            const list = currentGalleryTab === 'venue' ? venues : (getTabList(currentGalleryTab) || []);
-            return list.find(item => item.id === currentGalleryVenueId);
-        }
-
-        function openGalleryModal(itemId, tab) {
-            currentGalleryTab = tab || 'venue';
-            currentGalleryVenueId = itemId;
-            updateGalleryModal();
-            const modal = document.getElementById('galleryModal');
+        function openGenericModal(id = null) {
+            const modal = document.getElementById('genericModal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
-        }
-
-        function closeGalleryModal() {
-            const modal = document.getElementById('galleryModal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }
-
-        function updateGalleryModal() {
-            const v = getGalleryItem();
-            if (!v) return;
-            const imgs = v.images || [];
-            document.getElementById('galleryTitle').innerText = `${v.name} 대표 사진`;
-            const main = document.getElementById('galleryMainImg');
-            main.src = imgs[0] || '';
-            main.style.visibility = imgs[0] ? 'visible' : 'hidden';
-        }
-
-        async function handleGalleryImageReplace(e) {
-            if (!e.target.files || !e.target.files[0] || !currentGalleryVenueId) return;
-            const base64 = await readFileAsBase64(e.target.files[0]);
-            const v = getGalleryItem();
-            if (v) {
-                v.images = [base64];
-                saveVenues();
-                updateGalleryModal();
+            document.getElementById('genericDeleteBtn').classList.toggle('hidden', !id);
+            if (id) {
+                const list = getTabList(currentTab);
+                const item = list.find(x => x.id === id);
+                document.getElementById('inputGenericId').value = item.id;
+                document.getElementById('inputGenericName').value = item.name;
+                document.getElementById('inputGenericDesc').value = item.desc || '';
+                document.getElementById('inputGenericPrice').value = item.price || 0;
+                document.getElementById('inputGenericRating').value = item.rating || '';
+                document.getElementById('inputGenericWebsite').value = item.website || '';
+                document.getElementById('inputGenericInstagram').value = item.instagram || '';
+            } else {
+                document.getElementById('genericForm').reset();
+                document.getElementById('inputGenericId').value = '';
             }
-            e.target.value = '';
+        }
+        function closeGenericModal() {
+            document.getElementById('genericModal').classList.add('hidden');
+            document.getElementById('genericModal').classList.remove('flex');
         }
 
-        window.onload = function () {
-            loadVenues();
+        function handleGenericFormSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('inputGenericId').value;
+            const list = getTabList(currentTab);
+            const data = {
+                id: id || ('item_' + Date.now()),
+                name: document.getElementById('inputGenericName').value,
+                desc: document.getElementById('inputGenericDesc').value,
+                price: Number(document.getElementById('inputGenericPrice').value),
+                rating: document.getElementById('inputGenericRating').value,
+                website: document.getElementById('inputGenericWebsite').value,
+                instagram: document.getElementById('inputGenericInstagram').value
+            };
+            if (id) {
+                const idx = list.findIndex(x => x.id === id);
+                if (idx !== -1) list[idx] = data;
+            } else {
+                list.push(data);
+            }
+            closeGenericModal();
+            saveVenues();
+        }
+
+        function exportToStandaloneHtml() {
+            const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'index.html';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        window.onload = function() {
+            document.getElementById('guestCountInput').value = guestCount;
             render();
         };
     </script>
